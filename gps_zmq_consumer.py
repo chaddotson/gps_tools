@@ -35,8 +35,8 @@ def main():
     zmq_socket = initialize_zmq_socket(args.zmq_host, args.zmq_port)
 
     while True:
-        work = zmq_socket.recv_json()
-        print work
+        gps_data = zmq_socket.recv_json()
+        print gps_data
 
 
 if(__name__ == "__main__"):

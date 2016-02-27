@@ -1,11 +1,9 @@
 from argparse import ArgumentParser
-
 from gps import gps, WATCH_ENABLE, WATCH_NEWSTYLE
-from time import sleep
-
-import zmq
-
 from logging import basicConfig, getLogger, INFO, DEBUG
+from time import sleep
+from zmq import Context, PUSH
+from zmq.error import Again as NoClientsTimeoutError
 
 logger = getLogger(__name__)
 
@@ -13,18 +11,21 @@ logger = getLogger(__name__)
 def get_args():
     parser = ArgumentParser(description='GPSd client / ZMQ PUSH producer for GPS info.')
     parser.add_argument('--zmq_interface', default='*', help='interface to operate on.  default=*')
-    parser.add_argument('--zmq_port', default=32000, help='interface to operate on.  default=32000')
+    parser.add_argument('--zmq_port', type=int, default=32000, help='interface to operate on.  default=32000')
 
     parser.add_argument('--gpsd_host', default="localhost", help='Host for gpsd.  default=localhost')
     parser.add_argument('--gpsd_port', default=2947, help='Port for gpsd.  default=2947')
 
-    parser.add_argument('--rate', default=1/5, help='Rate to push GPS updates. default=0.2hz')
+    parser.add_argument('--rate', type=float, default=0.5, help='Rate to push GPS updates. default=0.5hz')
     parser.add_argument('-v', '--verbose', help='Verbose log output', default=False, action='store_true')
     return parser.parse_args()
 
 
 def initialize_gpsd_session(host, port):
     # Listen on port 2947 (gpsd) of localhost
+
+    logger.info("Initializing GPSd: Host: %s, Port: %d", host, port)
+
     session = gps(host, str(port))
     session.stream(WATCH_ENABLE | WATCH_NEWSTYLE)
 
@@ -35,13 +36,18 @@ def initialize_gpsd_session(host, port):
     session.next()
     # spool up session ======================
 
+    logger.info("GPSd session initilized.")
     return session
 
 
 def initialize_zmq_socket(interface, port):
-    context = zmq.Context()
-    zmq_socket = context.socket(zmq.PUSH)
+    logger.info("Initializing ZMQ producer socket: Host: %s, Port: %d", interface, port)
+
+    context = Context()
+    zmq_socket = context.socket(PUSH)
     zmq_socket.bind("tcp://{0}:{1}".format(interface, port))
+
+    logger.info("ZMQ producer socker initilized.")
     return zmq_socket
 
 
@@ -91,13 +97,18 @@ def main():
     while(True):
         report = session.next()
 
+        logger.debug("Pushing GPS data.")
+
         try:
             zmq_socket.send_json(convert_gps_session_to_json(session))
-        except zmq.error.Again:
+        except NoClientsTimeoutError:
             pass
 
         sleep(time_to_sleep)
 
 
 if(__name__ == "__main__"):
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass
