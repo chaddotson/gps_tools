@@ -1,10 +1,12 @@
+#!/usr/bin/env python
+
 from argparse import ArgumentParser
-from dateutil.parser import parse
-from gps import gps, WATCH_ENABLE, WATCH_NEWSTYLE
 from logging import basicConfig, getLogger, INFO, DEBUG
 from time import sleep
 from zmq import Context, PUSH
 from zmq.error import Again as NoClientsTimeoutError
+
+from gps_tools.gpsd import initialize_gpsd_session, convert_gps_session_to_json
 
 logger = getLogger(__name__)
 
@@ -22,37 +24,6 @@ def get_args():
     return parser.parse_args()
 
 
-# from gps import gps, WATCH_ENABLE, WATCH_NEWSTYLE
-# session = gps("localhost", "2947")
-# session.stream(WATCH_ENABLE | WATCH_NEWSTYLE)
-#
-# # spool up session ======================
-# session.next()
-# session.next()
-# session.next()
-# session.next()
-# # spool up session ======================
-
-
-def initialize_gpsd_session(host, port):
-    # Listen on port 2947 (gpsd) of localhost
-
-    logger.info("Initializing GPSd: Host: %s, Port: %d", host, port)
-
-    session = gps(host, str(port))
-    session.stream(WATCH_ENABLE | WATCH_NEWSTYLE)
-
-    # spool up session ======================
-    session.next()
-    session.next()
-    session.next()
-    session.next()
-    # spool up session ======================
-
-    logger.info("GPSd session initilized.")
-    return session
-
-
 def initialize_zmq_socket(interface, port):
     logger.info("Initializing ZMQ producer socket: Host: %s, Port: %d", interface, port)
 
@@ -62,36 +33,6 @@ def initialize_zmq_socket(interface, port):
 
     logger.info("ZMQ producer socker initilized.")
     return zmq_socket
-
-
-def convert_gps_session_to_json(session):
-
-    satellites = []
-
-    for satellite in session.satellites:
-        satellites.append({
-            "prn": satellite.PRN,
-            "azimuth": satellite.azimuth,
-            "elevation": satellite.elevation,
-            "ss": satellite.ss,
-            "used": satellite.used
-        })
-
-    return {
-        'time': parse(session.data.get("time", 0)),
-        "latitude": session.data.get("lat", 0),
-        "longitude": session.data.get("lon", 0),
-        "alitude": session.data.get("alt", 0),
-        "speed": session.data.get("speed", 0),
-        "longitudeError": session.data.get("epx", 0),
-        "latitudeError": session.data.get("epy", 0),
-        "altitudeError": session.data.get("epv", 0),
-        "timeOffset": session.data.get("ept", 0),
-        "speedError": session.data.get("eps", 0),
-        "track": session.data.get("track", 0),
-        "climb": session.data.get("climb", 0),
-        "satellites": satellites
-    }
 
 
 def main():

@@ -1,5 +1,4 @@
 from argparse import ArgumentParser
-from dateutil.parser import parse
 from json import dumps
 from logging import basicConfig, getLogger, INFO, DEBUG
 from time import sleep
@@ -7,9 +6,6 @@ from time import sleep
 from redis import StrictRedis
 
 from gps_tools.gpsd import initialize_gpsd_session, convert_gps_session_to_json
-
-
-
 
 logger = getLogger(__name__)
 
