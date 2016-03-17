@@ -6,7 +6,7 @@ from time import sleep
 
 from redis import StrictRedis
 
-from gps_tools.gpsd import GPSDSession
+from gps_tools.gpsd import initialize_gpsd_session, convert_gps_session_to_json
 
 
 
@@ -16,8 +16,11 @@ logger = getLogger(__name__)
 
 def get_args():
     parser = ArgumentParser(description='GPSd client / Redis producer for GPS info.')
-    # parser.add_argument('--zmq_interface', default='*', help='interface to operate on.  default=*')
-    # parser.add_argument('--zmq_port', type=int, default=32000, help='interface to operate on.  default=32000')
+    parser.add_argument('redis_host', help='Redis host')
+
+    parser.add_argument('--redis_port', default=6379, help='Redis port')
+    parser.add_argument('--redis_db', default=0, help='Redis db')
+    parser.add_argument('--redis_pw', default=None, help='Redis password')
 
     parser.add_argument('--gpsd_host', default="localhost", help='Host for gpsd.  default=localhost')
     parser.add_argument('--gpsd_port', default=2947, help='Port for gpsd.  default=2947')
@@ -34,19 +37,19 @@ def main():
     if args.verbose:
         getLogger('').setLevel(DEBUG)
 
-    redis = StrictRedis(host='riker')
+    logger.info("Initializing connection to Redis: Host=%s, Port: %d", args.redis_host, args.redis_port)
+    redis = StrictRedis(host=args.redis_host, port=args.redis_port, db=args.redis_db, password=args.redis_pw)
 
     time_to_sleep = 1/args.rate
 
-
-    session = GPSDSession(args.gpsd_host, args.gpsd_port)
+    session = initialize_gpsd_session(host=args.gpsd_host, port=args.gpsd_port)
 
     while(True):
-        gps_info = session.get_gps_info()
+        session.next()
 
         logger.debug("Pushing GPS data.")
 
-        redis.set("GPS", dumps(gps_info))
+        redis.set("GPS", dumps(convert_gps_session_to_json(session)))
 
         sleep(time_to_sleep)
 
