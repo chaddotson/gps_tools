@@ -1,4 +1,5 @@
 from argparse import ArgumentParser
+from dateutil.parser import parse
 from gps import gps, WATCH_ENABLE, WATCH_NEWSTYLE
 from logging import basicConfig, getLogger, INFO, DEBUG
 from time import sleep
@@ -19,6 +20,18 @@ def get_args():
     parser.add_argument('--rate', type=float, default=0.5, help='Rate to push GPS updates. default=0.5hz')
     parser.add_argument('-v', '--verbose', help='Verbose log output', default=False, action='store_true')
     return parser.parse_args()
+
+
+# from gps import gps, WATCH_ENABLE, WATCH_NEWSTYLE
+# session = gps("localhost", "2947")
+# session.stream(WATCH_ENABLE | WATCH_NEWSTYLE)
+#
+# # spool up session ======================
+# session.next()
+# session.next()
+# session.next()
+# session.next()
+# # spool up session ======================
 
 
 def initialize_gpsd_session(host, port):
@@ -65,18 +78,18 @@ def convert_gps_session_to_json(session):
         })
 
     return {
-        'time': session.data.get("time", None),
-        "latitude": session.data.get("lat", None),
-        "longitude": session.data.get("lon", None),
-        "alitude": session.data.get("alt", None),
-        "speed": session.data.get("speed", None),
-        "longitudeError": session.data.get("epx", None),
-        "latitudeError": session.data.get("epy", None),
-        "altitudeError": session.data.get("epv", None),
-        "timeOffset": session.data.get("ept", None),
-        "speedError": session.data.get("eps", None),
-        "track": session.data.get("track", None),
-        "climb": session.data.get("climb", None),
+        'time': parse(session.data.get("time", 0)),
+        "latitude": session.data.get("lat", 0),
+        "longitude": session.data.get("lon", 0),
+        "alitude": session.data.get("alt", 0),
+        "speed": session.data.get("speed", 0),
+        "longitudeError": session.data.get("epx", 0),
+        "latitudeError": session.data.get("epy", 0),
+        "altitudeError": session.data.get("epv", 0),
+        "timeOffset": session.data.get("ept", 0),
+        "speedError": session.data.get("eps", 0),
+        "track": session.data.get("track", 0),
+        "climb": session.data.get("climb", 0),
         "satellites": satellites
     }
 
